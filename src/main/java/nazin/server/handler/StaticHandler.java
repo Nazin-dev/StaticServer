@@ -53,9 +53,6 @@ public class StaticHandler implements HttpHandler{
                 """;
 
 
-
-
-
         String urlPath = exchange.getRequestURI().getPath();
         File target = new File( System.getProperty("user.dir") + urlPath);
 
@@ -113,7 +110,9 @@ public class StaticHandler implements HttpHandler{
             exchange.sendResponseHeaders(200, responseBytes.length);
             exchange.getResponseBody().write(responseBytes);
             exchange.getResponseBody().close();
+
         } else {
+
             String response = "<h1>404 - Not Found</h1>";
             byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "text/html");
