@@ -1,6 +1,7 @@
 package nazin.server.handler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import nazin.server.util.FileIcons;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,6 +23,7 @@ public class StaticHandler implements HttpHandler{
                             color-scheme: light dark;
                         }
                     </style>
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
                     <title>Directory listing for {{FILE_PATH}}</title>
                 </head>
                 
@@ -38,6 +40,7 @@ public class StaticHandler implements HttpHandler{
 
         String INDEX_FILE_NAME = """
                 <li>
+                    <i class="bi bi-{{FILE_ICON}}"></i>
                     <a href="{{FILE_NAME}}">
                         {{FILE_NAME}}
                     </a>
@@ -55,6 +58,14 @@ public class StaticHandler implements HttpHandler{
 
         String urlPath = exchange.getRequestURI().getPath();
         File target = new File( System.getProperty("user.dir") + urlPath);
+
+        String fileName = target.getName();
+        String fileExtension = "";
+
+        int i = fileName.lastIndexOf('.');
+        if (i > 0) {
+            fileExtension = fileName.substring(i + 1).toLowerCase();
+        }
 
         if (target.isFile()) {
             byte[] fileBytes = java.nio.file.Files.readAllBytes(target.toPath());
@@ -74,14 +85,6 @@ public class StaticHandler implements HttpHandler{
             MIME_TYPES.put("py", "text/x-python");
             MIME_TYPES.put("java", "text/x-java-source");
 
-            String fileName = target.getName();
-            String fileExtension = "";
-
-            int i = fileName.lastIndexOf('.');
-            if (i > 0) {
-                fileExtension = fileName.substring(i + 1).toLowerCase();
-            }
-
             String contentType = MIME_TYPES.getOrDefault(fileExtension, MIME_TYPES.get("default"));
 
             exchange.getResponseHeaders().set("Content-Type", contentType);
@@ -93,13 +96,34 @@ public class StaticHandler implements HttpHandler{
             File[] files = target.listFiles();
             StringBuilder fileContent = new StringBuilder(INDEX_BEGIN.replace("{{FILE_PATH}}", urlPath));
 
-            assert files != null;
+
+
+            if (files == null) {
+                exchange.sendResponseHeaders(500, 0);
+                exchange.getResponseBody().close();
+                return;
+            }
+
             for (File file : files) {
 
                 String link = file.getName();
 
                 if(file.isDirectory()) link += "/";
-                fileContent.append(INDEX_FILE_NAME.replace("{{FILE_NAME}}", link));
+
+                String name = file.getName();
+                String ext = "";
+
+                int dotIndex = name.lastIndexOf('.');
+                if (dotIndex > 0) {
+                    ext = name.substring(dotIndex + 1).toLowerCase();
+                }
+
+                String icon = FileIcons.getIcon(ext, file.isDirectory());
+
+                String item = INDEX_FILE_NAME.replace("{{FILE_NAME}}", link).replace("{{FILE_ICON}}", icon);
+
+                fileContent.append(item);
+
             }
 
             fileContent.append(INDEX_END.replace("{{FILE_NAME}}", urlPath));
